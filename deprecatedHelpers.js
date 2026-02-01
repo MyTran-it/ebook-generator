@@ -23,8 +23,6 @@ export async function CREATE_TOC(destPath, idx, titleChap) {
   await CREATE_FILE(destPath, "toc.txt", toc);
 }
 
-
-
 /** *  Create final TOC file
  * @param {String} destPath
  */
