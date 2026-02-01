@@ -1,0 +1,21 @@
+{
+    "BOOK": {
+        "URL": "https://cuopbienmap.wordpress.com/2018/05/19/muc-luc-lang-gieng-2/",
+        "TITLE": "div.entry-content h2",
+        "COVER": "div.entry-content img",
+        "CHAPTERURL": "div.entry-content > p a",
+        "NUMCHAP": "h1.entry-title",
+        "TITLECHAP": "div.entry-content > p strong, div.entry-content > p b",
+        "CONTENT": "div.entry-content > p",
+        "IMG": "div.entry-content img",
+        "LOGIN_FORM_API": "form.post-password-form",
+        "PASSWORD_FIELD": "input[name='post_password']"
+    },
+    "METADATA": {
+        "--title": "Láng Giềng",
+        "--authors": "ABC",
+        "--tags": "hahahaha",
+        "--language": "vi",
+        "--toc-threshold": "0"
+    }
+}
