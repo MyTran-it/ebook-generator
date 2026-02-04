@@ -1,5 +1,4 @@
 import commandExists from "command-exists";
-import { BOOK } from "./cts.js";
 import { processWithLimit, CREATE_DIRECTORY } from "./helper.js";
 import { GET_ALL_CHAPTER_URL, GET_CONTENT_BY_QUERY } from "./cheerioHelpers.js";
 import {
@@ -8,8 +7,9 @@ import {
   CREATE_FINAL_INDEX,
   UPDATE_INDEX,
 } from "./createBook.js";
+import { FOLDER_NAME } from "../cts.js";
+import { convertToEpub } from "./epubConverter.js";
 
-const DESTINATION_PATH = "./newBook/";
 const CONCURRENCY_LIMIT = 3; // Process 3 chapters at a time
 const TIME_SLEEP_BETWEEN_CHAPTERS_MS = 300; // 300ms
 
@@ -17,18 +17,17 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-(async () => {
-  await CREATE_DIRECTORY(DESTINATION_PATH, false);
+export async function generateEbook(BOOK, METADATA, CONVERT_TO_EBOOK = true) {
+  await CREATE_DIRECTORY(FOLDER_NAME, true);
   let allChap = [];
 
   const { chapters, description: bookDescription } =
     await GET_ALL_CHAPTER_URL(BOOK);
   allChap = chapters;
   
-  const CONVERT_TO_EBOOK = true;
-  // const startIdx = 0; // start chapter - 1
-  // const endIdx = 10; // end chapter
-  // allChap = allChap.slice(startIdx, endIdx);
+  const startIdx = 0; // start chapter - 1
+  const endIdx = 5; // end chapter
+  allChap = allChap.slice(startIdx, endIdx);
 
   const tasks = allChap.map((chapUrl, _idx) => async () => {
     // const actualIdx = startIdx + _idx;
@@ -41,7 +40,7 @@ function sleep(ms) {
       const response = await GET_CONTENT_BY_QUERY(chapUrl, BOOK, password);
 
       const list_img = await SAVE_IMG_BY_CHAPTER(
-        DESTINATION_PATH,
+        FOLDER_NAME,
         response.imgList,
         actualIdx + 1,
       );
@@ -67,28 +66,28 @@ function sleep(ms) {
 
   for (const { idx, title, content, list_img } of sortedResults) {
     const validChapter = await CREATE_CHAPTER(
-      DESTINATION_PATH,
+      FOLDER_NAME,
       idx,
       title,
       content,
       list_img,
     );
-    await UPDATE_INDEX(DESTINATION_PATH, validChapter);
+    await UPDATE_INDEX(FOLDER_NAME, validChapter);
   }
 
   if (CONVERT_TO_EBOOK) {
-    await CREATE_FINAL_INDEX(DESTINATION_PATH, bookDescription);
+    await CREATE_FINAL_INDEX(FOLDER_NAME, bookDescription);
     
     await commandExists("ebook-convert")
     .then(async () => {
       console.log("ebook-convert found, starting conversion...");
-      const { convertToEpub } = await import("./epubConverter.js");
-      await convertToEpub(DESTINATION_PATH);
+      await convertToEpub(FOLDER_NAME, METADATA);
     })
-    .catch(() => {
+    .catch((e) => {
       console.log(
         "ebook-convert not found, skipping conversion. Please install Calibre to use this feature.",
+        e
       );
     });
   }
-})();
+};

@@ -13,10 +13,13 @@
     "cheerio": "^1.0.0-rc.12",
     "child_process": "^1.0.2",
     "command-exists": "^1.2.9",
+    "cors": "^2.8.6",
+    "dotenv": "^17.2.3",
     "entities": "^7.0.0",
     "express": "^5.2.1",
     "got": "^13.0.0",
     "image-downloader": "4.0.3",
+    "multer": "^2.0.2",
     "sharp": "^0.34.5",
     "tough-cookie": "^6.0.0"
   }

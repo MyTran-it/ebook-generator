@@ -2,7 +2,6 @@ import * as cheerio from "cheerio";
 import got from "got";
 import { decodeHTML } from "entities";
 import { CookieJar } from "tough-cookie";
-import { BOOK } from "./cts.js";
 import { imgDownloader } from "./helper.js";
 import { replaceImageUrlsWithFilenames } from "./createBook.js";
 
@@ -27,7 +26,7 @@ export async function GET_ALL_CHAPTER_URL(querySelector) {
     );
     const cleanCoverPath = { [coverUrl]: "cover.jpeg" };
     // const description = cleanHtml(await GET_ALL_CONTENT($, querySelector.DESCRIPTION));
-    const description = BOOK.DESCRIPTION || "";
+    const description = querySelector.DESCRIPTION || "";
     const convertedDescription = replaceImageUrlsWithFilenames(description, [cleanCoverPath]);
     return { chapters, description: convertedDescription };
   } catch (error) {
@@ -36,8 +35,7 @@ export async function GET_ALL_CHAPTER_URL(querySelector) {
   }
 }
 
-async function fetchUnlockedHtml(loginFormApi, url, passwords) {
-  // passwords là string → convert thành array
+async function fetchUnlockedHtml(loginFormApi, url, passwords, querySelector) {
   const passList = Array.isArray(passwords) ? passwords : [passwords];
 
   for (const password of passList) {
@@ -56,8 +54,8 @@ async function fetchUnlockedHtml(loginFormApi, url, passwords) {
       const $ = cheerio.load(loginRes.body);
 
       // Check login fail
-      if ($(BOOK.PASSWORD_FIELD).length > 0) {
-        console.log(`❌ Password "${password}" sai`);
+      if ($(querySelector).length > 0) {
+        console.log(`❌ Password "${password}" incorrect.`);
         continue;
       }
 
@@ -71,7 +69,7 @@ async function fetchUnlockedHtml(loginFormApi, url, passwords) {
     }
   }
   
-  throw new Error(`Không unlock được với ${passList.length} passwords`);
+  throw new Error(`Cannot unlock with ${passList.length} passwords`);
 }
 
 
@@ -92,12 +90,12 @@ export async function GET_CONTENT_BY_QUERY(
     if (hasPasswordForm && querySelector.PASSWORD) {
       console.log("Password form detected. Attempting to unlock...");
       const loginFormApi = $(querySelector.LOGIN_FORM_API).attr("action");
-      const unlockedHtml = await fetchUnlockedHtml(loginFormApi, url, password);
+      const unlockedHtml = await fetchUnlockedHtml(loginFormApi, url, password, querySelector.PASSWORD_FIELD);
 
       const $unlocked = cheerio.load(unlockedHtml);
 
       // Check if still locked
-      const stillLocked = $unlocked(BOOK.PASSWORD_FIELD).length > 0;
+      const stillLocked = $unlocked(querySelector.PASSWORD_FIELD).length > 0;
 
       if (stillLocked) {
         console.log("Password incorrect. Using original HTML.");
@@ -128,6 +126,12 @@ export async function GET_ALL_IMG_URL($, querySelector) {
   }
 }
 
+/**
+ * Remove invisible elements and get content
+ * @param {*} $ Cheerio instance
+ * @param {*} querySelector 
+ * @returns {String} content
+ */
 export async function GET_ALL_CONTENT($, querySelector) {
   try {
     let array_content = [];
