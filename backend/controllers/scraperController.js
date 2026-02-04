@@ -2,8 +2,6 @@ import { generateEbook } from "../services/ebookService.js";
 
 export async function generateEbookController(req, res) {
     const { BOOK, METADATA } = req.body;
-
-    console.log('?', req.body)
     
     await generateEbook(BOOK, METADATA);
 

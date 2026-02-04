@@ -1,70 +1,62 @@
 <script setup>
-import { ref, watch } from 'vue'
-import { generateEbook, downloadEbook } from '../services/ebookService.js';
-import { Book } from '@/models/book.interface.js';
+import { ref, onMounted } from 'vue'
+import { generateEbook, downloadEbook } from '../services/ebookService.js'
+import InputField from '@/components/InputField.vue'
+import CloseIcon from '@/icons/closeIcon.vue'
+import TextArea from '@/components/TextArea.vue'
+import InputFieldArray from '@/components/InputFieldArray.vue'
 
-const book = {
-  URL: 'https://cuopbienmap.wordpress.com/2018/05/19/muc-luc-lang-gieng-2/',
-  TITLE: 'div.entry-content h2',
+const book = ref({
+  URL: '',
+  TITLE: '',
   COVER: 'div.entry-content img',
-  CHAPTERURL: 'div.entry-content > p a',
-  NUMCHAP: 'h1.entry-title',
-  TITLECHAP: 'div.entry-content > p strong, div.entry-content > p b',
+  DESCRIPTION: '',
+  CHAPTERURL: '',
+  NUMCHAP: '',
+  TITLECHAP: '',
   CONTENT: 'div.entry-content > p',
   IMG: 'div.entry-content img',
   LOGIN_FORM_API: 'form.post-password-form',
   PASSWORD_FIELD: "input[name='post_password']",
-}
-
-const metadata = {
-  '--title': 'Láng Giềng',
-  '--authors': 'ABC',
-  '--tags': 'hahahaha',
-  '--language': 'vi',
-  '--toc-threshold': '0',
-}
-
-// const book = ref({
-//   URL: '',
-//   TITLE: '',
-//   COVER: '',
-//   DESCRIPTION: '',
-//   CHAPTER: '',
-//   NUMCHAP: '',
-//   TITLECHAP: '',
-//   CONTENT: '',
-//   IMG: '',
-//   LOGIN_FORM_API: '',
-//   PASSWORD_FIELD: '',
-//   PASSWORDS: [""]
-// });
-// const metadata = ref({
-//   "--title": "",
-//   "--authors": "",
-//   "--tags": ""
-// });
+  PASSWORDS: [''],
+})
+const metadata = ref({
+  '--title': '',
+  '--authors': '',
+  '--tags': '',
+})
 const isGenerated = ref(false)
+const isLoading = ref(false);
+const generateBtnLabel = ref('Generate Ebook');
+const downloadBtnLabel = ref('Download');
 
 async function submit() {
   try {
+    isLoading.value = true;
+    localStorage.setItem('book', JSON.stringify(book.value))
+    localStorage.setItem('metadata', JSON.stringify(metadata.value))
 
-    // console.log(book.value, metadata.value);
-    // return;
-
-    const res = await generateEbook(book, metadata)
+    const res = await generateEbook(book.value, metadata.value)
 
     if (res.status === 200) {
       isGenerated.value = true
+      generateBtnLabel.value = 'Re-generate Ebook'
     }
   } catch (err) {
     console.log(err.message)
+  } finally {
+    isLoading.value = false;
   }
 }
 
 const passwordSectionIsOpened = ref(false)
 
 function openPasswordOption() {
-  passwordSectionIsOpened.value = !passwordSectionIsOpened.value
+  passwordSectionIsOpened.value = true;
+}
+
+function closePasswordOption() {
+  passwordSectionIsOpened.value = false;
 }
 
 function handleDownload() {
@@ -74,90 +66,133 @@ function handleDownload() {
   link.download = 'newBook.epub'
   document.body.appendChild(link)
   link.click()
+  downloadBtnLabel.value = 'Downloaded !';
   document.body.removeChild(link)
 }
 
+onMounted(() => {
+  if (localStorage.book) book.value = JSON.parse(localStorage.book)
+
+  if (localStorage.metadata) metadata.value = JSON.parse(localStorage.metadata)
+})
 </script>
 
 <template>
   <main>
+    <div class="action-section">
+      <button v-if="!isLoading" @click.stop.prevent="submit">{{ generateBtnLabel }}</button>
+
+      <span v-if="isLoading" class="loader"></span>
+
+      <button v-if="!isLoading && isGenerated" @click="handleDownload">{{ downloadBtnLabel }}</button>
+    </div>
     <form>
-      <div>
-        <h3>Enter Book query</h3>
-        <label for="url">Url:</label>
-        <input type="text" name="url" v-model="book.URL" />
+      <div class="section">
 
-        <label for="titleQuery">Title query:</label>
-        <input type="text" name="titleQuery" v-model="book.TITLE" />
+        <div class="sub-section">
+          <h3 class="sub-section-title">Enter Metadata</h3>
+          <InputField label="Title" name="titleMetadata" v-model="metadata['--title']" />
+          <InputField label="Author" name="author" v-model="metadata['--authors']" />
+          <InputField label="Tags" name="tags" v-model="metadata['--tags']" />
+        </div>
 
-        <label for="description">Description:</label>
-        <textarea type="text" name="description" v-model="book.DESCRIPTION"></textarea>
 
-        <label for="chapterQuery">Chapter query:</label>
-        <input type="text" name="chapterQuery" v-model="book.CHAPTER" />
-
-        <label for="">Chapter number query:</label>
-        <input type="text" name="numChapQuery" v-model="book.NUMCHAP" />
-
-        <label>Title chapter query:</label>
-        <input type="text" name="titleChapQuery" v-model="book.TITLECHAP" />
-
-        <label>Content chapter query:</label>
-        <input type="text" name="contentChapQuery" v-model="book.CONTENT" />
-
-        <label>Image query:</label>
-        <input type="text" name="imageQuery" v-model="book.IMG" />
-
-        <button type="button" @click="openPasswordOption">This book has private contents ?</button>
-
-        <div v-show="passwordSectionIsOpened">
-          <label>Password form query:</label>
-          <input type="text" name="passwordForm" v-model="book.LOGIN_FORM_API" />
-
-          <label>PASSWORD_FIELD</label>
-          <input type="text" name="passwordInputQuery" v-model="book.PASSWORD_FIELD" />
-
-          <div>
-            <label for="passwordToCheck">Password to check:</label>
-            <input v-for="(value, index) in book.PASSWORDS" type="text" :key="index" name="passwordToCheck"
-              v-model="book.PASSWORDS[index]" />
-            <button type="button" @click.prevent="() => {
-              book.PASSWORDS.push('');
-            }">
-              Add
-            </button>
-          </div>
+        <div class="sub-section">
+          <h3 class="sub-section-title">Enter Book query</h3>
+          <InputField label="Url" name="url" v-model="book.URL" />
+          <InputField label="Cover Book Query" name="coverQuery" v-model="book.COVER" />
+          <TextArea label="Description" name="description" v-model="book.DESCRIPTION" />
+          <InputField label="Chapter Query" name="chapterQuery" v-model="book.CHAPTERURL" />
         </div>
       </div>
 
-      <div>
-        <h3>Enter Metadata</h3>
+      <div class="section">
+        <div class="sub-section">
+          <h3 class="sub-section-title">Enter Chapter query</h3>
+          <InputField label="Chapter Number Query" name="numChapQuery" v-model="book.NUMCHAP" />
+          <InputField label="Title Chapter Query" name="titleChapQuery" v-model="book.TITLECHAP" />
+          <InputField label="Content Chapter Query" name="contentChapQuery" v-model="book.CONTENT" />
+          <InputField label="Image Chapter Query" name="imageQuery" v-model="book.IMG" />
+        </div>
 
-        <label>Title:</label>
-        <input type="text" name="title" />
+        <button v-if="!passwordSectionIsOpened" type="button" @click="openPasswordOption">This book has private contents
+          ?</button>
 
-        <label>Author:</label>
-        <input type="text" name="author" />
+        <div class="sub-section" v-show="passwordSectionIsOpened">
+          <h3 class="sub-section-title">Handle Password</h3>
+          <button v-if="passwordSectionIsOpened" class="sub-section-close" type="button" @click="closePasswordOption">
+            <CloseIcon />
+          </button>
+          <InputField label="Password Form Query" name="passwordForm" v-model="book.LOGIN_FORM_API" />
+          <InputField label="Password Input Query" name="passwordInputQuery" v-model="book.PASSWORD_FIELD" />
 
-        <label>Tags:</label>
-        <input type="text" name="tags" />
+          <InputFieldArray v-model="book.PASSWORDS" label="Password" name="password" />
+
+        </div>
       </div>
     </form>
-    <button @click.stop.prevent="submit">Generate Ebook</button>
-    <button v-if="isGenerated" @click="handleDownload">Download</button>
   </main>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 form {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 2rem;
-  grid-template-columns: 1fr 1fr;
 
-  div {
+  @media (min-width: 1024px) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);  /* ✅ Cho phép shrink = 0 */
+  width: 100%;  /* Đầy parent */
+  gap: 1rem;
+
+  }
+
+  .section {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .sub-section {
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    position: relative;
+    padding: 1rem;
+    border-radius: 4px;
+    border: 1px solid hsla(160, 100%, 37%, 1);
+
+    &-title {
+      position: absolute;
+      top: -1rem;
+      padding: 0 1rem;
+      background: var(--color-background);
+      font-weight: 500;
+    }
+
+    &-close {
+      all: unset;
+      cursor: pointer;
+      position: absolute;
+      top: -1rem;
+      right: 2rem;
+      padding: 0 1rem;
+      background: var(--color-background);
+      color: hsla(160, 100%, 37%, 1);
+      font-weight: 500;
+
+      &:hover {
+        color: red;
+      }
+    }
   }
+}
+
+.action-section {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 2rem;
+  min-height: 5rem;
 }
 </style>
